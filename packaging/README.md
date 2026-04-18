@@ -1,19 +1,20 @@
-# Packaging — Generatori Parametrici
+# Packaging — Parametric Generators
 
-Script per la generazione parametrica di tracciati di fustelle
-per packaging standard.
+Script for parametric die-cut path generation for standard packaging.
+Compatible with Rhino 7 and 8..
 
-## Script disponibili
+## Available scripts
 
 | Script | Tipologia ECMA | Descrizione |
 |--------|---------------|-------------|
-| `Astuccio_01.py` | ECMA_A 20.20.03.01 | Astuccio tuck-end, patelle sfalsate |
+| `ECMA_A20_20_03_01.py` | ECMA_A 20.20.03.01 | Astuccio tuck-end, patelle sfalsate |
+| `ECMA_A20_20_01_01.py` | ECMA_A 20.20.01.01 | Astuccio tuck-end, ad aeroplano |
 
 
-## Convenzioni
+## Conventions
 
-- **Layer "Taglio"** (nero): linee di taglio
-- **Layer "Cordone"** (rosso): linee di cordonatura
-- **Layer "Foratore"** (Blu): linee di perforazione
-- Unità: millimetri
-- Spessore cartone: parametrico, con compensazione automatica
+- **Cut" Layer** (black): cutting lines
+- **Crease" Layer** (red): crease lines
+- **Punch" Layer** (blue): perforation lines
+- Units: millimeters
+- Cardboard thickness: parametric, with automatic compensation
