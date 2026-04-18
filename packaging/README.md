@@ -7,8 +7,8 @@ Compatible with Rhino 7 and 8..
 
 | Script | Tipologia ECMA | Descrizione |
 |--------|---------------|-------------|
-| `ECMA_A20_20_03_01.py` | ECMA_A 20.20.03.01 | Astuccio tuck-end, patelle sfalsate |
-| `ECMA_A20_20_01_01.py` | ECMA_A 20.20.01.01 | Astuccio tuck-end, ad aeroplano |
+| `ECMA_A20_20_03_01.py` | ECMA_A 20.20.03.01 | Tuck-end case, staggered flaps |
+| `ECMA_A20_20_01_01.py` | ECMA_A 20.20.01.01 | Tuck-end case, aligned flaps |
 
 
 ## Conventions
