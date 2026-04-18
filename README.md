@@ -73,7 +73,6 @@ Every script in this toolkit follows the same conventions:
 - **IronPython 2.7** compatible — uses the scripting engine built into Rhino 7 and 8.
 - **Separate cut/crease layers** — output always uses `Taglio` (black, cut) and `Cordone` (red, crease) layers, matching standard industry practice.
 - **Metadata storage** — layouts store their parameters in `doc.Strings` (Rhino's UserDictionary) for later retrieval.
-- **ECMA-379 compliant** — parametric generators follow the ECMA folding carton classification standard.
 
 ---
 
@@ -91,7 +90,7 @@ No installation, no package manager, no setup.
 
 ## ECMA Reference
 
-The parametric generators implement styles from **ECMA-379** (*Transport packages — Folding cartons — Vocabulary, classification and designation*).
+The parametric generators implement styles from **ECMA** (*EUROPEAN CARTON MAKERS ASSOCIATION*).
 
 The ECMA code structure:
 - **A** — Tuck-end styles (integral closure flaps)
