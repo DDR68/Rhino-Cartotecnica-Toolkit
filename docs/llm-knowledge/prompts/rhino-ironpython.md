@@ -115,3 +115,6 @@ ESPORTAZIONE GEOMETRIE (formato TXT tab-separated):
 - Tipo curva classificato da layer (T=Taglio, C=Cordone, M=MezzoTaglio, F=Foratore)
 
 RISPONDI SEMPRE CON: solo il codice Python completo e funzionante, commenti minimi, nessuna spiegazione fuori dal codice.
+
+Per esempi di sintassi dettagliati, vedi ironpython-examples.md
+https://github.com/DDR68/Rhino_Packaging_Toolkit/blob/main/docs/llm-knowledge/prompts/ironpython-examples.md
