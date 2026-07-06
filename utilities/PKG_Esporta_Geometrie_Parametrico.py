@@ -2,8 +2,22 @@
 # -*- coding: utf-8 -*-
 """
 Script: Esporta_Geometrie_Parametrico.py
-Versione: 5.6
+Versione: 5.7
 Compatibilita: Rhino 7 / Rhino 8 - IronPython 2.7 - RhinoCommon (no rhinoscriptsyntax)
+
+NOVITA V.5.7 rispetto a V.5.6:
+  - [FIX membership assi] _selection_has_groups ora esclude le linee asse
+    (cyan lineari) dal conteggio: se SOLO l'asse e' raggruppato ma le
+    curve membro no, il percorso gruppi non si attiva piu' a vuoto.
+  - [FIX fallback 0-membri] Se ci sono assi ma nessuna curva e' associata
+    (ne' per gruppo ne' per UserString), l'esportatore assegna
+    automaticamente TUTTE le curve non-asse a tutti i passi rilevati,
+    con avviso nel report. Copre il caso comune "mezzo tracciato + un
+    asse" senza richiedere raggruppamento manuale.
+  - [FIX assi impliciti] Nel percorso UserString, se nessun oggetto ha
+    la chiave 'Blocco' ma esistono linee cyan riconosciute, vengono
+    creati passi impliciti (uno per asse), cosi' Ruolo e Blocco nel TXT
+    sono sempre coerenti. Il fallback 0-membri li riempie subito dopo.
 
 NOVITA V.5.6 rispetto a V.5.5:
   - [Variabili parametriche] Il TXT esportato dichiara ora in testa le
@@ -232,7 +246,7 @@ CYAN_CH_TOL    = 40
 
 
 # ============================================================
-#  COSTANTI VARIABILI PARAMETRICHE  [v5.6]
+#  COSTANTI VARIABILI PARAMETRICHE  [v5.7]
 # ============================================================
 
 # Variabili packaging riconosciute. L'ordine e' quello di presentazione
@@ -283,7 +297,7 @@ def show_help():
     import Eto.Drawing as ed
 
     dlg = ef.Dialog()
-    dlg.Title = "Esporta Geometrie Parametrico v5.6 - Guida"
+    dlg.Title = "Esporta Geometrie Parametrico v5.7 - Guida"
     dlg.Padding = ed.Padding(16)
     dlg.MinimumSize = ed.Size(680, 560)
     dlg.Resizable = True
@@ -293,7 +307,7 @@ def show_help():
     layout.DefaultSpacing = ed.Size(4, 4)
 
     title = ef.Label()
-    title.Text = "ESPORTA GEOMETRIE PARAMETRICO v5.6"
+    title.Text = "ESPORTA GEOMETRIE PARAMETRICO v5.7"
     title.Font = ed.Font(ed.SystemFont.Bold, 13)
     layout.AddRow(title)
     layout.AddRow(ef.Label(Text=""))
@@ -348,7 +362,7 @@ def show_help():
     layout.AddRow(ef.Label(Text=""))
 
     sec_mir = ef.Label()
-    sec_mir.Text = "SPECCHIATURA (v5.6)"
+    sec_mir.Text = "SPECCHIATURA (v5.7)"
     sec_mir.Font = ed.Font(ed.SystemFont.Bold, 11)
     layout.AddRow(sec_mir)
 
@@ -404,7 +418,7 @@ def show_report_and_ask_export(n_aggiornate, n_saltate, reasons_dict,
     result = {"export": False, "include_prompt": True}
 
     dlg = ef.Dialog()
-    dlg.Title = "Esporta Geometrie Parametrico v5.6 - Report"
+    dlg.Title = "Esporta Geometrie Parametrico v5.7 - Report"
     dlg.Padding = ed.Padding(16)
     dlg.MinimumSize = ed.Size(480, 320)
     dlg.Resizable = False
@@ -498,7 +512,7 @@ def show_variables_dialog(found_vars, inferred_defaults=None):
     W_VAR, W_NUM, W_DESC = 28, 70, 190
 
     dlg = ef.Dialog()
-    dlg.Title = "Esporta Geometrie Parametrico v5.6 - Variabili"
+    dlg.Title = "Esporta Geometrie Parametrico v5.7 - Variabili"
     dlg.Padding = ed.Padding(10)
     dlg.Resizable = False
 
@@ -1533,7 +1547,7 @@ def _show_blocking_error(messages):
                 "\n\nUn blocco ammette UN solo asse: linea continua "
                 "(simmetria) OPPURE tratteggiata (patella).")
         Rhino.UI.Dialogs.ShowMessage(
-            body, "Esporta Geometrie Parametrico v5.6 - Errore")
+            body, "Esporta Geometrie Parametrico v5.7 - Errore")
     except Exception:
         pass
 
@@ -1607,8 +1621,13 @@ def _object_groups(obj):
 
 
 def _selection_has_groups(objs):
-    """True se almeno un oggetto della selezione appartiene a un gruppo Rhino."""
+    """True se almeno un oggetto NON-ASSE della selezione appartiene a un
+    gruppo Rhino. Le linee asse (cyan lineari) non contano: se SOLO l'asse
+    e' raggruppato ma le curve membro no, il percorso gruppi produrrebbe
+    passi con 0 membri.  [FIX v5.7]"""
     for obj in objs:
+        if _cyan_axis_role(obj) is not None:
+            continue   # asse: non conta
         if _object_groups(obj):
             return True
     return False
@@ -1730,8 +1749,40 @@ def _resolve_mirror_steps(objs):
       errors       : [str] bloccanti     warns: [str] avvisi
     """
     if _selection_has_groups(objs):
-        return _resolve_steps_by_groups(objs)
-    return _resolve_steps_by_userstring(objs)
+        step_list_of, steps, errors, warns = _resolve_steps_by_groups(objs)
+    else:
+        step_list_of, steps, errors, warns = _resolve_steps_by_userstring(objs)
+
+    # ------------------------------------------------------------------
+    # FALLBACK v5.7: se ci sono assi ma NESSUN membro assegnato (tipico:
+    # asse raggruppato da solo, o asse con Blocco senza curve), assegna
+    # TUTTE le curve non-asse a tutti i passi. Copre il caso comune
+    # "mezzo tracciato + un asse" senza richiedere raggruppamento manuale.
+    # ------------------------------------------------------------------
+    if steps and not errors and all(s["n_membri"] == 0 for s in steps):
+        axis_ids = set(str(s["axis"].Id) for s in steps)
+        non_axis_ids = set()
+        for obj in objs:
+            oid = str(obj.Id)
+            if oid not in axis_ids and _cyan_axis_role(obj) is None:
+                non_axis_ids.add(oid)
+        if non_axis_ids:
+            for s in steps:
+                s["member_ids"] = set(non_axis_ids)
+                s["n_membri"] = len(non_axis_ids)
+            for obj in objs:
+                oid = str(obj.Id)
+                if oid in axis_ids:
+                    continue
+                ks = [str(s["order"]) for s in steps
+                      if oid in s["member_ids"]]
+                step_list_of[oid] = ",".join(ks) if ks else "-"
+            warns.append(
+                "Nessuna curva era associata agli assi di specchiatura: "
+                "assegnate tutte le %d curve non-asse ai %d passi "
+                "rilevati." % (len(non_axis_ids), len(steps)))
+
+    return step_list_of, steps, errors, warns
 
 
 def _resolve_steps_by_groups(objs):
@@ -1867,6 +1918,29 @@ def _resolve_steps_by_userstring(objs):
         else:
             ks = [str(s["order"]) for s in steps if oid in s["member_ids"]]
             step_list_of[oid] = ",".join(ks) if ks else "-"
+    # ------------------------------------------------------------------
+    # v5.7: assi cyan SENZA UserString 'Blocco' (ne' gruppo). L'asse e'
+    # riconosciuto dal colore/linetype ma non entra in by_num. Crea un
+    # passo implicito per ciascuno, cosi' Ruolo e Blocco nel TXT sono
+    # sempre coerenti. Il fallback 0-membri in _resolve_mirror_steps
+    # li riempie subito dopo.
+    # ------------------------------------------------------------------
+    if not steps:
+        implicit_axes = []
+        for obj in objs:
+            role = _cyan_axis_role(obj)
+            if role is not None:
+                implicit_axes.append((obj, role))
+        if implicit_axes:
+            for ax_obj, ax_role in implicit_axes:
+                order += 1
+                steps.append({"order": order, "axis": ax_obj,
+                              "role": ax_role, "member_ids": set(),
+                              "n_membri": 0})
+                axis_step[str(ax_obj.Id)] = order
+            for s in steps:
+                step_list_of[str(s["axis"].Id)] = str(s["order"])
+
     return step_list_of, steps, errors, warns
 
 
@@ -2342,7 +2416,7 @@ def export_objects(curve_objs, point_objs, include_prompt=False,
 
 def main():
     print("=" * 60)
-    print("ESPORTA GEOMETRIE PARAMETRICO v5.6")
+    print("ESPORTA GEOMETRIE PARAMETRICO v5.7")
     print("=" * 60)
 
     selected = list(sc.doc.Objects.GetSelectedObjects(False, False))
